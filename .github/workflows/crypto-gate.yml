@@ -1,0 +1,59 @@
+# =============================================================================
+# Example: Using cbom in a GitHub Actions CI pipeline
+# =============================================================================
+# This workflow runs on every Pull Request. It scans both the base branch
+# and the PR branch, then diffs the two CBOMs. If new cryptography is
+# introduced, the pipeline fails (exit code 1).
+# =============================================================================
+
+name: Crypto Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  cbom-diff:
+    name: CBOM Diff Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: head
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      # -- Option A: Use the GitHub Action directly --
+      # - name: Build cbom Docker image
+      #   run: docker build -t cbom ./head
+
+      # - name: Scan base branch
+      #   run: docker run --rm -v ${{ github.workspace }}/base:/repo cbom scan --path /repo > base-cbom.json
+
+      # - name: Scan head branch
+      #   run: docker run --rm -v ${{ github.workspace }}/head:/repo cbom scan --path /repo > head-cbom.json
+
+      # - name: Diff CBOMs
+      #   uses: ./head
+      #   with:
+      #     base: base-cbom.json
+      #     head: head-cbom.json
+
+      # -- Option B: Use pre-built binary (faster) --
+      - name: Install cbom
+        run: cargo install --path ./head
+
+      - name: Scan base branch
+        run: cbom scan --path ./base > base-cbom.json
+
+      - name: Scan head branch
+        run: cbom scan --path ./head > head-cbom.json
+
+      - name: Diff — fail if new crypto is introduced
+        run: cbom diff --base base-cbom.json --head head-cbom.json
