@@ -1,0 +1,33 @@
+name: "cbom — Cryptographic Bill of Materials"
+description: "Scan your codebase for cryptographic usage and diff against a baseline to detect newly introduced crypto in Pull Requests."
+author: "cbom"
+
+branding:
+  icon: "shield"
+  color: "orange"
+
+inputs:
+  base:
+    description: "Path to the base CBOM JSON file (e.g., from the main branch)."
+    required: true
+  head:
+    description: "Path to the head CBOM JSON file (e.g., from the PR branch)."
+    required: true
+  mode:
+    description: "Command to run: 'diff' to compare two CBOMs, 'scan' to generate a CBOM."
+    required: false
+    default: "diff"
+  scan-path:
+    description: "Path to scan when mode is 'scan'. Defaults to the repository root."
+    required: false
+    default: "."
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.mode }}
+    - --base
+    - ${{ inputs.base }}
+    - --head
+    - ${{ inputs.head }}
