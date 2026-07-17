@@ -4,6 +4,10 @@
 # This workflow runs on every Pull Request. It scans both the base branch
 # and the PR branch, then diffs the two CBOMs. If new cryptography is
 # introduced, the pipeline fails (exit code 1).
+#
+# With --strict mode, the pipeline will also fail if any deprecated or
+# critically insecure algorithm (MD5, SHA-1, DES, hardcoded IVs, etc.)
+# is detected in the newly introduced crypto.
 # =============================================================================
 
 name: Crypto Gate
@@ -29,25 +33,22 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           path: base
 
-      # -- Option A: Use the GitHub Action directly --
-      # - name: Build cbom Docker image
-      #   run: docker build -t cbom ./head
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      # - name: Scan base branch
-      #   run: docker run --rm -v ${{ github.workspace }}/base:/repo cbom scan --path /repo > base-cbom.json
+      - name: Cache cargo registry & build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            head/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('head/Cargo.lock') }}
 
-      # - name: Scan head branch
-      #   run: docker run --rm -v ${{ github.workspace }}/head:/repo cbom scan --path /repo > head-cbom.json
-
-      # - name: Diff CBOMs
-      #   uses: ./head
-      #   with:
-      #     base: base-cbom.json
-      #     head: head-cbom.json
-
-      # -- Option B: Use pre-built binary (faster) --
       - name: Install cbom
         run: cargo install --path ./head
+
+      # -- Scan both branches --
 
       - name: Scan base branch
         run: cbom scan --path ./base > base-cbom.json
@@ -55,5 +56,24 @@ jobs:
       - name: Scan head branch
         run: cbom scan --path ./head > head-cbom.json
 
-      - name: Diff — fail if new crypto is introduced
-        run: cbom diff --base base-cbom.json --head head-cbom.json
+      # -- Diff with strict mode --
+      # Fails if new crypto is introduced AND any of it is deprecated/insecure.
+      # Remove --strict to only fail on new crypto (regardless of severity).
+
+      - name: Diff — fail if insecure crypto is introduced
+        run: cbom diff --base base-cbom.json --head head-cbom.json --strict
+
+      # -- Optional: Generate CycloneDX CBOM artifact --
+
+      - name: Generate CycloneDX CBOM
+        if: always()
+        run: cbom scan --path ./head --format cyclonedx > cbom-cyclonedx.json
+
+      - name: Upload CBOM artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbom-report
+          path: |
+            head-cbom.json
+            cbom-cyclonedx.json
