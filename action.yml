@@ -1,5 +1,5 @@
 name: "cbom — Cryptographic Bill of Materials"
-description: "Scan your codebase for cryptographic usage and diff against a baseline to detect newly introduced crypto in Pull Requests."
+description: "Scan your codebase for cryptographic usage, assess risk posture, and diff against a baseline to detect newly introduced crypto in Pull Requests. Supports CycloneDX v1.5, policy-based severity, and strict mode."
 author: "cbom"
 
 branding:
@@ -7,27 +7,40 @@ branding:
   color: "orange"
 
 inputs:
-  base:
-    description: "Path to the base CBOM JSON file (e.g., from the main branch)."
-    required: true
-  head:
-    description: "Path to the head CBOM JSON file (e.g., from the PR branch)."
-    required: true
   mode:
-    description: "Command to run: 'diff' to compare two CBOMs, 'scan' to generate a CBOM."
+    description: "Command to run: 'scan' to generate a CBOM, 'diff' to compare two CBOMs."
     required: false
-    default: "diff"
+    default: "scan"
   scan-path:
     description: "Path to scan when mode is 'scan'. Defaults to the repository root."
     required: false
     default: "."
+  format:
+    description: "Output format for scan mode: 'json' (default) or 'cyclonedx'."
+    required: false
+    default: "json"
+  base:
+    description: "Path to the base CBOM JSON file (required when mode is 'diff')."
+    required: false
+  head:
+    description: "Path to the head CBOM JSON file (required when mode is 'diff')."
+    required: false
+  strict:
+    description: "Enable strict mode for diff: fail if any deprecated or critical algorithm is introduced."
+    required: false
+    default: "false"
 
 runs:
   using: "docker"
   image: "Dockerfile"
   args:
     - ${{ inputs.mode }}
-    - --base
-    - ${{ inputs.base }}
-    - --head
-    - ${{ inputs.head }}
+    - --path
+    - ${{ inputs.scan-path }}
+    - --format
+    - ${{ inputs.format }}
+    - ${{ inputs.mode == 'diff' && '--base' || '' }}
+    - ${{ inputs.mode == 'diff' && inputs.base || '' }}
+    - ${{ inputs.mode == 'diff' && '--head' || '' }}
+    - ${{ inputs.mode == 'diff' && inputs.head || '' }}
+    - ${{ inputs.strict == 'true' && '--strict' || '' }}

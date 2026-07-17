@@ -1,0 +1,11 @@
+C:\Users\abelm\OneDrive\Desktop\cbom\target\debug\deps\winapi_util-503bf38eded14b9d.d: C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\lib.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\console.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\file.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\sysinfo.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\win.rs
+
+C:\Users\abelm\OneDrive\Desktop\cbom\target\debug\deps\libwinapi_util-503bf38eded14b9d.rlib: C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\lib.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\console.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\file.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\sysinfo.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\win.rs
+
+C:\Users\abelm\OneDrive\Desktop\cbom\target\debug\deps\libwinapi_util-503bf38eded14b9d.rmeta: C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\lib.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\console.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\file.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\sysinfo.rs C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\win.rs
+
+C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\lib.rs:
+C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\console.rs:
+C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\file.rs:
+C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\sysinfo.rs:
+C:\Users\abelm\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\winapi-util-0.1.11\src\win.rs:

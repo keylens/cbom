@@ -40,4 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /usr/src/cbom/target/release/cbom /usr/local/bin/cbom
 
+# Default: run scan on the mounted volume
+# Override with: docker run cbom diff --base a.json --head b.json --strict
 ENTRYPOINT ["cbom"]
