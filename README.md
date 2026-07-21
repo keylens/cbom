@@ -3,8 +3,8 @@
   <h1>Keylens CBOM — The Open Source CBOM Generator & PQC Readiness Scanner</h1>
 
   [![CI Passing](https://img.shields.io/badge/build-passing-brightgreen)](#)
-  [![Crates.io](https://img.shields.io/crates/v/keylens)](#)
-  [![License: MPL-2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg)](#)
+  [![Crates.io](https://img.shields.io/crates/v/cbom)](https://crates.io/crates/cbom)
+  [![License: MPL-2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg)](LICENSE)
   [![Downloads](https://img.shields.io/badge/downloads-10k%2Fmonth-brightgreen)](#)
 </div>
 
