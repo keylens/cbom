@@ -1,5 +1,5 @@
 [package]
-name = "cbom"
+name = "keylens-cbom"
 version = "0.1.1"
 edition = "2021"
 description = "A lightning-fast CLI tool to generate a Cryptographic Bill of Materials (CBOM) — scan codebases for crypto usage, assess PQC readiness, and enforce policy in CI"
@@ -10,6 +10,10 @@ repository = "https://github.com/keylens/cbom"
 readme = "README.md"
 keywords = ["cbom", "cryptography", "pqc", "security", "sbom"]
 categories = ["command-line-utilities"]
+
+[[bin]]
+name = "cbom"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
