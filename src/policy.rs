@@ -12,7 +12,7 @@ use crate::models::{CryptoAsset, QuantumSafe, Severity};
 // ---------------------------------------------------------------------------
 
 /// Evaluate a single `CryptoAsset` and populate its policy fields
-/// (`severity`, `quantum_safe`, `findings`).
+/// (`severity`, `quantum_safe`, `findings`, `remediation`).
 pub fn evaluate(asset: &mut CryptoAsset) {
     let algo = asset.algorithm.to_uppercase();
 
@@ -26,7 +26,15 @@ pub fn evaluate(asset: &mut CryptoAsset) {
     if let Some(ref mode) = asset.mode {
         let mode_upper = mode.to_uppercase();
         if mode_upper == "ECB" {
-            severity_upgrade(&mut findings, "ECB mode is insecure: it leaks patterns in ciphertext.");
+            severity_upgrade(
+                &mut findings,
+                "ECB mode is insecure: it leaks patterns in ciphertext.",
+            );
+            asset.remediation = Some(
+                "Replace ECB mode with GCM (authenticated encryption). \
+                 Example: use AES-256-GCM instead of AES-ECB."
+                    .to_string(),
+            );
             // ECB is always critical
             asset.severity = Severity::Critical;
             asset.findings = findings;
@@ -44,13 +52,19 @@ pub fn evaluate(asset: &mut CryptoAsset) {
         if algo.contains("RSA") && key_size < 2048 {
             severity_upgrade(
                 &mut findings,
-                &format!("RSA key size {} bits is below the 2048-bit minimum.", key_size),
+                &format!(
+                    "RSA key size {} bits is below the 2048-bit minimum.",
+                    key_size
+                ),
             );
         }
         if algo.contains("AES") && key_size < 128 {
             severity_upgrade(
                 &mut findings,
-                &format!("AES key size {} bits is non-standard and insecure.", key_size),
+                &format!(
+                    "AES key size {} bits is non-standard and insecure.",
+                    key_size
+                ),
             );
         }
     }
@@ -62,6 +76,9 @@ pub fn evaluate(asset: &mut CryptoAsset) {
                 .to_string(),
         );
     }
+
+    // --- Remediation advice ---
+    asset.remediation = generate_remediation(&algo, &asset.library_source);
 
     asset.severity = severity;
     asset.findings = findings;
@@ -95,8 +112,11 @@ pub fn has_deprecated(assets: &[CryptoAsset]) -> bool {
 /// Classify the quantum-safety posture of an algorithm.
 fn classify_quantum_safety(algo: &str) -> QuantumSafe {
     // Post-quantum safe algorithms
-    if algo.contains("KYBER") || algo.contains("DILITHIUM") || algo.contains("SPHINCS")
-        || algo.contains("FALCON") || algo.contains("NTRU")
+    if algo.contains("KYBER")
+        || algo.contains("DILITHIUM")
+        || algo.contains("SPHINCS")
+        || algo.contains("FALCON")
+        || algo.contains("NTRU")
     {
         return QuantumSafe::Safe;
     }
@@ -112,9 +132,15 @@ fn classify_quantum_safety(algo: &str) -> QuantumSafe {
     }
 
     // Asymmetric / public-key: broken by Shor's algorithm
-    if algo.contains("RSA") || algo.contains("ECDSA") || algo.contains("ECDH")
-        || algo.contains("DSA") || algo.contains("ECC") || algo.contains("ED25519")
-        || algo.contains("X25519") || algo.contains("EDDSA") || algo.contains("DH")
+    if algo.contains("RSA")
+        || algo.contains("ECDSA")
+        || algo.contains("ECDH")
+        || algo.contains("DSA")
+        || algo.contains("ECC")
+        || algo.contains("ED25519")
+        || algo.contains("X25519")
+        || algo.contains("EDDSA")
+        || algo.contains("DH")
         || algo.contains("ELGAMAL")
     {
         return QuantumSafe::Vulnerable;
@@ -130,9 +156,13 @@ fn classify_severity(algo: &str, asset: &CryptoAsset) -> (Severity, Vec<String>)
     // --- Critical: fully deprecated / broken ---
     if is_deprecated(algo) {
         let reason = match algo {
-            a if a.contains("MD5") => "MD5 is cryptographically broken; collisions are trivial to produce.",
+            a if a.contains("MD5") => {
+                "MD5 is cryptographically broken; collisions are trivial to produce."
+            }
             a if a.contains("MD4") => "MD4 is cryptographically broken and should never be used.",
-            a if a.contains("SHA1") || a == "SHA-1" => "SHA-1 is deprecated; practical collision attacks exist (SHAttered).",
+            a if a.contains("SHA1") || a == "SHA-1" => {
+                "SHA-1 is deprecated; practical collision attacks exist (SHAttered)."
+            }
             a if a == "DES" => "DES uses a 56-bit key and is trivially brute-forced.",
             a if a.contains("RC4") => "RC4 has multiple known biases and is prohibited in TLS.",
             a if a.contains("RC2") => "RC2 is an obsolete cipher with known weaknesses.",
@@ -156,7 +186,9 @@ fn classify_severity(algo: &str, asset: &CryptoAsset) -> (Severity, Vec<String>)
 
     // Hardcoded secrets
     if algo == "HARDCODED_IV" || algo == "HARDCODED_SALT" || algo == "HARDCODED_KEY" {
-        findings.push("Hardcoded cryptographic material detected; use secure random generation.".to_string());
+        findings.push(
+            "Hardcoded cryptographic material detected; use secure random generation.".to_string(),
+        );
         return (Severity::Critical, findings);
     }
 
@@ -184,6 +216,161 @@ fn is_deprecated(algo: &str) -> bool {
         return true;
     }
     false
+}
+
+// ---------------------------------------------------------------------------
+// Remediation advice
+// ---------------------------------------------------------------------------
+
+/// Generate code-level remediation advice for a given algorithm and library.
+///
+/// Returns `None` if the algorithm is considered safe and no action is needed.
+fn generate_remediation(algo: &str, library_source: &str) -> Option<String> {
+    let lib = library_source.to_lowercase();
+
+    // --- MD5 ---
+    if algo.contains("MD5") {
+        if lib.contains("hashlib") || lib.contains("python") {
+            return Some(
+                "Replace MD5 with SHA-256.\n\
+                 Before: hashlib.md5(data).hexdigest()\n\
+                 After:  hashlib.sha256(data).hexdigest()"
+                    .to_string(),
+            );
+        }
+        if lib.contains("crypto") || lib.contains("node") {
+            return Some(
+                "Replace MD5 with SHA-256.\n\
+                 Before: crypto.createHash('md5').update(data).digest('hex')\n\
+                 After:  crypto.createHash('sha256').update(data).digest('hex')"
+                    .to_string(),
+            );
+        }
+        if lib.contains("java") || lib.contains("messagedigest") {
+            return Some(
+                "Replace MD5 with SHA-256.\n\
+                 Before: MessageDigest.getInstance(\"MD5\")\n\
+                 After:  MessageDigest.getInstance(\"SHA-256\")"
+                    .to_string(),
+            );
+        }
+        return Some(
+            "Replace MD5 with SHA-256 or SHA-3. MD5 is cryptographically broken.".to_string(),
+        );
+    }
+
+    // --- SHA-1 ---
+    if algo.contains("SHA1") || algo == "SHA-1" {
+        if lib.contains("hashlib") || lib.contains("python") {
+            return Some(
+                "Replace SHA-1 with SHA-256.\n\
+                 Before: hashlib.sha1(data).hexdigest()\n\
+                 After:  hashlib.sha256(data).hexdigest()"
+                    .to_string(),
+            );
+        }
+        if lib.contains("crypto") || lib.contains("node") {
+            return Some(
+                "Replace SHA-1 with SHA-256.\n\
+                 Before: crypto.createHash('sha1').update(data).digest('hex')\n\
+                 After:  crypto.createHash('sha256').update(data).digest('hex')"
+                    .to_string(),
+            );
+        }
+        return Some(
+            "Replace SHA-1 with SHA-256 or SHA-3. SHA-1 has known collision attacks.".to_string(),
+        );
+    }
+
+    // --- DES ---
+    if algo == "DES" {
+        if lib.contains("crypto") || lib.contains("node") {
+            return Some(
+                "Replace DES with AES-256-GCM.\n\
+                 Before: crypto.createCipheriv('des-ecb', key, '')\n\
+                 After:  crypto.createCipheriv('aes-256-gcm', key, iv)"
+                    .to_string(),
+            );
+        }
+        if lib.contains("javax") || lib.contains("cipher") || lib.contains("java") {
+            return Some(
+                "Replace DES with AES/GCM.\n\
+                 Before: Cipher.getInstance(\"DES\")\n\
+                 After:  Cipher.getInstance(\"AES/GCM/NoPadding\")"
+                    .to_string(),
+            );
+        }
+        return Some(
+            "Replace DES (56-bit key) with AES-256-GCM. DES is trivially brute-forced.".to_string(),
+        );
+    }
+
+    // --- RC4 ---
+    if algo.contains("RC4") {
+        return Some(
+            "Replace RC4 with AES-256-GCM or ChaCha20-Poly1305. RC4 is prohibited in TLS."
+                .to_string(),
+        );
+    }
+
+    // --- 3DES ---
+    if algo.contains("3DES") || algo.contains("TRIPLE") || algo.contains("TRIPLEDES") {
+        return Some(
+            "Migrate from 3DES to AES-256-GCM. 3DES has a 64-bit block size \
+             vulnerable to Sweet32 birthday attacks."
+                .to_string(),
+        );
+    }
+
+    // --- Insecure PRNG ---
+    if algo == "INSECURE_PRNG" || algo == "WEAK_RANDOM" {
+        if lib.contains("python") || lib.contains("random") {
+            return Some(
+                "Use a cryptographically secure PRNG.\n\
+                 Before: random.randint(0, 255)\n\
+                 After:  secrets.token_bytes(32) or os.urandom(32)"
+                    .to_string(),
+            );
+        }
+        if lib.contains("math") || lib.contains("node") || lib.contains("javascript") {
+            return Some(
+                "Use a cryptographically secure PRNG.\n\
+                 Before: Math.random()\n\
+                 After:  crypto.randomBytes(32) or crypto.getRandomValues(new Uint8Array(32))"
+                    .to_string(),
+            );
+        }
+        return Some("Replace with a cryptographically secure PRNG (CSPRNG).".to_string());
+    }
+
+    // --- Hardcoded secrets ---
+    if algo == "HARDCODED_IV" || algo == "HARDCODED_SALT" || algo == "HARDCODED_KEY" {
+        let material = match algo {
+            "HARDCODED_IV" => "IV (Initialization Vector)",
+            "HARDCODED_SALT" => "salt",
+            _ => "key",
+        };
+        return Some(format!(
+            "Do not hardcode the {}. Generate it randomly at runtime.\n\
+             Example (Python): os.urandom(16)\n\
+             Example (Node.js): crypto.randomBytes(16)\n\
+             Example (Java): SecureRandom().nextBytes(new byte[16])",
+            material
+        ));
+    }
+
+    // --- RSA with small key ---
+    if algo.contains("RSA") {
+        return Some(
+            "If using RSA, ensure a minimum key size of 2048 bits (preferably 4096). \
+             Consider migrating to Ed25519 for signing or ECDH for key exchange. \
+             For post-quantum readiness, evaluate ML-KEM (Kyber)."
+                .to_string(),
+        );
+    }
+
+    // No remediation needed for safe algorithms
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +404,14 @@ mod tests {
             severity: Severity::Unknown,
             detection_source: DetectionSource::SourceCode,
             findings: Vec::new(),
+            cert_subject: None,
+            cert_issuer: None,
+            cert_expiry: None,
+            cert_serial: None,
+            protocol_version: None,
+            cipher_suites: Vec::new(),
+            dependency_path: None,
+            remediation: None,
         }
     }
 
@@ -279,7 +474,10 @@ mod tests {
         let mut asset = make_asset("RSA");
         asset.key_size = Some(1024);
         evaluate(&mut asset);
-        assert!(asset.findings.iter().any(|f| f.contains("below the 2048-bit minimum")));
+        assert!(asset
+            .findings
+            .iter()
+            .any(|f| f.contains("below the 2048-bit minimum")));
     }
 
     #[test]
@@ -320,5 +518,59 @@ mod tests {
     fn test_no_deprecated() {
         let assets = vec![make_asset("AES"), make_asset("SHA256")];
         assert!(!has_deprecated(&assets));
+    }
+
+    #[test]
+    fn test_md5_remediation_python() {
+        let mut asset = make_asset("MD5");
+        asset.library_source = "hashlib".to_string();
+        evaluate(&mut asset);
+        assert!(asset.remediation.is_some());
+        let rem = asset.remediation.unwrap();
+        assert!(rem.contains("SHA-256"));
+        assert!(rem.contains("hashlib.sha256"));
+    }
+
+    #[test]
+    fn test_md5_remediation_node() {
+        let mut asset = make_asset("MD5");
+        asset.library_source = "node:crypto".to_string();
+        evaluate(&mut asset);
+        assert!(asset.remediation.is_some());
+        let rem = asset.remediation.unwrap();
+        assert!(rem.contains("sha256"));
+        assert!(rem.contains("createHash"));
+    }
+
+    #[test]
+    fn test_des_remediation() {
+        let mut asset = make_asset("DES");
+        asset.library_source = "javax.crypto.Cipher".to_string();
+        evaluate(&mut asset);
+        assert!(asset.remediation.is_some());
+        assert!(asset.remediation.unwrap().contains("AES/GCM"));
+    }
+
+    #[test]
+    fn test_aes_safe_no_remediation() {
+        let mut asset = make_asset("AES");
+        evaluate(&mut asset);
+        assert!(asset.remediation.is_none());
+    }
+
+    #[test]
+    fn test_hardcoded_key_remediation() {
+        let mut asset = make_asset("HARDCODED_KEY");
+        evaluate(&mut asset);
+        assert!(asset.remediation.is_some());
+        assert!(asset.remediation.unwrap().contains("randomly at runtime"));
+    }
+
+    #[test]
+    fn test_rsa_remediation() {
+        let mut asset = make_asset("RSA");
+        evaluate(&mut asset);
+        assert!(asset.remediation.is_some());
+        assert!(asset.remediation.unwrap().contains("2048"));
     }
 }

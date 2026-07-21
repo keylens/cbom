@@ -3,7 +3,8 @@
 //! All types derive `Serialize` and `Deserialize` so they can be
 //! round-tripped through JSON for the `scan` and `diff` commands.
 //!
-//! Includes CycloneDX v1.5 output structures for standardized CBOM output.
+//! Includes CycloneDX v1.6 output structures for standardized CBOM output,
+//! with native support for certificates, protocols, and algorithm assets.
 
 use serde::{Deserialize, Serialize};
 
@@ -116,6 +117,44 @@ pub struct CryptoAsset {
     /// Human-readable policy findings/warnings for this asset.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub findings: Vec<String>,
+
+    // --- Certificate metadata (populated for X.509 cert findings) ---
+    /// Certificate subject (e.g., `"CN=example.com"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cert_subject: Option<String>,
+
+    /// Certificate issuer (e.g., `"CN=Let's Encrypt Authority X3"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cert_issuer: Option<String>,
+
+    /// Certificate expiry date as an ISO-8601 string.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cert_expiry: Option<String>,
+
+    /// Certificate serial number.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cert_serial: Option<String>,
+
+    // --- Protocol metadata (populated for TLS/SSL config findings) ---
+    /// Protocol version (e.g., `"TLSv1.2"`, `"TLSv1.3"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol_version: Option<String>,
+
+    /// Cipher suites configured or detected.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cipher_suites: Vec<String>,
+
+    // --- Dependency correlation ---
+    /// Full transitive dependency path that introduced this crypto
+    /// (e.g., `"axum -> hyper -> rustls -> ring"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dependency_path: Option<String>,
+
+    // --- Remediation advice ---
+    /// Code-level remediation advice for flagged violations
+    /// (e.g., `"Replace MD5 with SHA-256. Syntax: hashlib.sha256(data)"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remediation: Option<String>,
 }
 
 impl CryptoAsset {
@@ -140,24 +179,33 @@ impl CryptoAsset {
             severity: Severity::Unknown,
             detection_source: DetectionSource::SourceCode,
             findings: Vec::new(),
+            cert_subject: None,
+            cert_issuer: None,
+            cert_expiry: None,
+            cert_serial: None,
+            protocol_version: None,
+            cipher_suites: Vec::new(),
+            dependency_path: None,
+            remediation: None,
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// CycloneDX v1.5 output structures
+// CycloneDX v1.6 output structures
 // ---------------------------------------------------------------------------
 
 /// Top-level CycloneDX BOM document.
 ///
-/// Conforms to the CycloneDX v1.5 specification with crypto-asset extensions.
-/// See: <https://cyclonedx.org/docs/1.5/json/>
+/// Conforms to the CycloneDX v1.6 specification with native cryptographic
+/// asset support for algorithms, certificates, and protocols.
+/// See: <https://cyclonedx.org/docs/1.6/json/>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CycloneDxBom {
     /// Fixed: `"CycloneDX"`.
     pub bom_format: String,
-    /// Specification version: `"1.5"`.
+    /// Specification version: `"1.6"`.
     pub spec_version: String,
     /// Unique serial number for this BOM (URN UUID).
     pub serial_number: String,
@@ -171,9 +219,12 @@ pub struct CycloneDxBom {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CycloneDxComponent {
-    /// Component type — `"crypto-asset"` for cryptographic findings.
+    /// Component type — `"cryptographic-asset"` for cryptographic findings (v1.6).
     #[serde(rename = "type")]
     pub component_type: String,
+    /// Unique BOM reference for this component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bom_ref: Option<String>,
     /// Human-readable name of the component (e.g., `"AES-256-GCM"`).
     pub name: String,
     /// Cryptographic properties specific to this asset.
@@ -184,7 +235,7 @@ pub struct CycloneDxComponent {
     pub evidence: Option<CycloneDxEvidence>,
 }
 
-/// CycloneDX crypto-properties node (v1.5 extension).
+/// CycloneDX crypto-properties node (v1.6 native).
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CycloneDxCryptoProperties {
@@ -193,12 +244,18 @@ pub struct CycloneDxCryptoProperties {
     /// Algorithm properties, if asset_type is `"algorithm"`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub algorithm_properties: Option<CycloneDxAlgorithmProperties>,
+    /// Certificate properties, if asset_type is `"certificate"`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub certificate_properties: Option<CycloneDxCertificateProperties>,
+    /// Protocol properties, if asset_type is `"protocol"`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol_properties: Option<CycloneDxProtocolProperties>,
     /// OID (Object Identifier) for the algorithm, if known.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oid: Option<String>,
 }
 
-/// Algorithm-specific properties in CycloneDX format.
+/// Algorithm-specific properties in CycloneDX v1.6 format.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CycloneDxAlgorithmProperties {
@@ -223,6 +280,59 @@ pub struct CycloneDxAlgorithmProperties {
     /// Quantum computing vulnerability level.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub crypto_functions: Option<Vec<String>>,
+}
+
+/// Certificate properties in CycloneDX v1.6 format.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CycloneDxCertificateProperties {
+    /// Subject distinguished name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_name: Option<String>,
+    /// Issuer distinguished name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+    /// Certificate not-valid-after date (ISO-8601).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_valid_after: Option<String>,
+    /// Certificate not-valid-before date (ISO-8601).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_valid_before: Option<String>,
+    /// Signature algorithm OID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature_algorithm_ref: Option<String>,
+    /// Subject public key algorithm.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject_public_key_ref: Option<String>,
+    /// Certificate format (e.g., `"X.509"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub certificate_format: Option<String>,
+    /// Certificate serial number.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub certificate_serial_number: Option<String>,
+}
+
+/// Protocol properties in CycloneDX v1.6 format.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CycloneDxProtocolProperties {
+    /// Protocol type (e.g., `"tls"`, `"ssh"`, `"ipsec"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol_type: Option<String>,
+    /// Protocol version (e.g., `"1.2"`, `"1.3"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    /// Cipher suites configured for this protocol.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cipher_suites: Vec<CycloneDxCipherSuite>,
+}
+
+/// A cipher suite entry in CycloneDX v1.6 format.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CycloneDxCipherSuite {
+    /// Cipher suite name (e.g., `"TLS_AES_256_GCM_SHA384"`).
+    pub name: String,
 }
 
 /// Evidence of where a component was found.
@@ -252,14 +362,100 @@ pub struct CycloneDxOccurrence {
 // ---------------------------------------------------------------------------
 
 impl CryptoAsset {
-    /// Convert this `CryptoAsset` into a CycloneDX component.
+    /// Convert this `CryptoAsset` into a CycloneDX v1.6 component.
+    ///
+    /// Automatically selects the correct asset_type (`"algorithm"`,
+    /// `"certificate"`, or `"protocol"`) based on the populated metadata.
     pub fn to_cyclonedx_component(&self) -> CycloneDxComponent {
         let name = self.build_display_name();
+
+        // Determine asset type from metadata
+        if self.cert_subject.is_some() || self.cert_issuer.is_some() {
+            // Certificate asset
+            return CycloneDxComponent {
+                component_type: "cryptographic-asset".to_string(),
+                bom_ref: None,
+                name,
+                crypto_properties: Some(CycloneDxCryptoProperties {
+                    asset_type: "certificate".to_string(),
+                    algorithm_properties: None,
+                    certificate_properties: Some(CycloneDxCertificateProperties {
+                        subject_name: self.cert_subject.clone(),
+                        issuer_name: self.cert_issuer.clone(),
+                        not_valid_after: self.cert_expiry.clone(),
+                        not_valid_before: None,
+                        signature_algorithm_ref: None,
+                        subject_public_key_ref: self.algorithm.clone().into(),
+                        certificate_format: Some("X.509".to_string()),
+                        certificate_serial_number: self.cert_serial.clone(),
+                    }),
+                    protocol_properties: None,
+                    oid: None,
+                }),
+                evidence: Some(CycloneDxEvidence {
+                    occurrences: vec![CycloneDxOccurrence {
+                        location: self.file_path.clone(),
+                        line: Some(self.line_number),
+                        additional_context: Some(format!(
+                            "library={}, detection={:?}",
+                            self.library_source, self.detection_source
+                        )),
+                    }],
+                }),
+            };
+        }
+
+        if self.protocol_version.is_some() || !self.cipher_suites.is_empty() {
+            // Protocol asset
+            let proto_type = if self.algorithm.to_uppercase().contains("TLS")
+                || self.algorithm.to_uppercase().contains("SSL")
+            {
+                Some("tls".to_string())
+            } else {
+                Some(self.algorithm.to_lowercase())
+            };
+
+            let cipher_suite_entries: Vec<CycloneDxCipherSuite> = self
+                .cipher_suites
+                .iter()
+                .map(|cs| CycloneDxCipherSuite { name: cs.clone() })
+                .collect();
+
+            return CycloneDxComponent {
+                component_type: "cryptographic-asset".to_string(),
+                bom_ref: None,
+                name,
+                crypto_properties: Some(CycloneDxCryptoProperties {
+                    asset_type: "protocol".to_string(),
+                    algorithm_properties: None,
+                    certificate_properties: None,
+                    protocol_properties: Some(CycloneDxProtocolProperties {
+                        protocol_type: proto_type,
+                        version: self.protocol_version.clone(),
+                        cipher_suites: cipher_suite_entries,
+                    }),
+                    oid: None,
+                }),
+                evidence: Some(CycloneDxEvidence {
+                    occurrences: vec![CycloneDxOccurrence {
+                        location: self.file_path.clone(),
+                        line: Some(self.line_number),
+                        additional_context: Some(format!(
+                            "library={}, detection={:?}",
+                            self.library_source, self.detection_source
+                        )),
+                    }],
+                }),
+            };
+        }
+
+        // Default: algorithm asset
         let primitive = classify_primitive(&self.algorithm);
         let oid = lookup_oid(&self.algorithm);
 
         CycloneDxComponent {
-            component_type: "crypto-asset".to_string(),
+            component_type: "cryptographic-asset".to_string(),
+            bom_ref: None,
             name,
             crypto_properties: Some(CycloneDxCryptoProperties {
                 asset_type: "algorithm".to_string(),
@@ -272,6 +468,8 @@ impl CryptoAsset {
                     certification_level: None,
                     crypto_functions: None,
                 }),
+                certificate_properties: None,
+                protocol_properties: None,
                 oid,
             }),
             evidence: Some(CycloneDxEvidence {
@@ -302,14 +500,12 @@ impl CryptoAsset {
 
 /// Convert a full list of `CryptoAsset`s into a CycloneDX BOM document.
 pub fn to_cyclonedx_bom(assets: &[CryptoAsset]) -> CycloneDxBom {
-    let components: Vec<CycloneDxComponent> = assets
-        .iter()
-        .map(|a| a.to_cyclonedx_component())
-        .collect();
+    let components: Vec<CycloneDxComponent> =
+        assets.iter().map(|a| a.to_cyclonedx_component()).collect();
 
     CycloneDxBom {
         bom_format: "CycloneDX".to_string(),
-        spec_version: "1.5".to_string(),
+        spec_version: "1.6".to_string(),
         serial_number: format!("urn:uuid:{}", simple_uuid()),
         version: 1,
         components,
@@ -323,22 +519,36 @@ pub fn to_cyclonedx_bom(assets: &[CryptoAsset]) -> CycloneDxBom {
 /// Classify an algorithm into a CycloneDX primitive type.
 fn classify_primitive(algorithm: &str) -> Option<String> {
     let algo = algorithm.to_uppercase();
-    if algo.contains("AES") || algo.contains("DES") || algo.contains("BLOWFISH")
-        || algo.contains("CHACHA") || algo.contains("RC4") || algo.contains("CAMELLIA")
+    if algo.contains("AES")
+        || algo.contains("DES")
+        || algo.contains("BLOWFISH")
+        || algo.contains("CHACHA")
+        || algo.contains("RC4")
+        || algo.contains("CAMELLIA")
     {
         Some("block-cipher".to_string())
-    } else if algo.contains("SHA") || algo.contains("MD5") || algo.contains("MD4")
-        || algo.contains("BLAKE") || algo.contains("RIPEMD") || algo == "HASHING (SEE USAGE)"
+    } else if algo.contains("SHA")
+        || algo.contains("MD5")
+        || algo.contains("MD4")
+        || algo.contains("BLAKE")
+        || algo.contains("RIPEMD")
+        || algo == "HASHING (SEE USAGE)"
     {
         Some("hash".to_string())
     } else if algo.contains("HMAC") {
         Some("mac".to_string())
-    } else if algo.contains("RSA") || algo.contains("DSA") || algo.contains("ECDSA")
-        || algo.contains("EDDSA") || algo.contains("ED25519")
+    } else if algo.contains("RSA")
+        || algo.contains("DSA")
+        || algo.contains("ECDSA")
+        || algo.contains("EDDSA")
+        || algo.contains("ED25519")
     {
         Some("signature".to_string())
-    } else if algo.contains("ECDH") || algo.contains("DH") || algo.contains("X25519")
-        || algo.contains("KYBER") || algo.contains("KEY_GENERATION")
+    } else if algo.contains("ECDH")
+        || algo.contains("DH")
+        || algo.contains("X25519")
+        || algo.contains("KYBER")
+        || algo.contains("KEY_GENERATION")
     {
         Some("key-agree".to_string())
     } else if algo.contains("CSPRNG") || algo.contains("RANDOM") {
@@ -382,7 +592,7 @@ fn simple_uuid() -> String {
         (seed & 0xFFFF_FFFF) as u32,
         ((seed >> 32) & 0xFFFF) as u16,
         ((seed >> 48) & 0x0FFF) as u16 | 0x4000, // version 4
-        ((seed >> 60) & 0x3FFF) as u16 | 0x8000,  // variant
+        ((seed >> 60) & 0x3FFF) as u16 | 0x8000, // variant
         (seed >> 74) & 0xFFFF_FFFF_FFFF
     )
 }
