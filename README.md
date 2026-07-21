@@ -38,7 +38,7 @@ See your cryptographic posture instantly, without walls of JSON.
 Get started in seconds. No complex setup required.
 
 ```bash
-cargo install keylens-cbom
+cargo install cbom
 cd my-project
 cbom scan --summary
 ```
