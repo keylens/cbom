@@ -5,8 +5,8 @@
 │                           main.rs                                  │
 │                     (CLI routing via clap)                          │
 │                                                                    │
-│  keylens scan --path ./src --format cyclonedx                         │
-│  keylens diff --base a --head b --strict                              │
+│  cbom scan --path ./src --format cyclonedx                         │
+│  cbom diff --base a --head b --strict                              │
 │       │                           │                                │
 │       ▼                           ▼                                │
 │  ┌──────────┐  ┌───────────────┐  ┌──────────┐                    │

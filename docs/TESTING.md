@@ -145,10 +145,10 @@ requests>=2.28
 
 ```bash
 # Default JSON output
-keylens scan --path ./test-fixtures
+cbom scan --path ./test-fixtures
 
 # CycloneDX output
-keylens scan --path ./test-fixtures --format cyclonedx
+cbom scan --path ./test-fixtures --format cyclonedx
 ```
 
 #### Step 6: Verify expected output
@@ -171,7 +171,7 @@ You should see findings that include:
 #### Step 1: Create a baseline CBOM
 
 ```bash
-keylens scan --path ./test-fixtures > base.json
+cbom scan --path ./test-fixtures > base.json
 ```
 
 #### Step 2: Add new crypto to the test fixtures
@@ -186,13 +186,13 @@ from cryptography.hazmat.primitives.ciphers.algorithms import ChaCha20
 #### Step 3: Generate the new CBOM
 
 ```bash
-keylens scan --path ./test-fixtures > head.json
+cbom scan --path ./test-fixtures > head.json
 ```
 
 #### Step 4: Run the diff
 
 ```bash
-keylens diff --base base.json --head head.json
+cbom diff --base base.json --head head.json
 ```
 
 #### Step 5: Verify behavior
@@ -210,10 +210,10 @@ Strict mode causes the diff to fail if any **deprecated or critically insecure**
 ```bash
 # Add MD5 to the head CBOM:
 echo 'import hashlib; hashlib.md5(b"test")' >> test-fixtures/bad_crypto.py
-keylens scan --path ./test-fixtures > head-strict.json
+cbom scan --path ./test-fixtures > head-strict.json
 
 # Run strict diff — should exit 1 with violation message
-keylens diff --base base.json --head head-strict.json --strict
+cbom diff --base base.json --head head-strict.json --strict
 ```
 
 Expected stderr output:
@@ -229,19 +229,19 @@ Expected stderr output:
 
 ```bash
 # Build the image
-docker build -t keylens .
+docker build -t cbom .
 
 # Run a scan (default JSON)
-docker run --rm -v $(pwd)/test-fixtures:/repo keylens scan --path /repo
+docker run --rm -v $(pwd)/test-fixtures:/repo cbom scan --path /repo
 
 # Run a scan (CycloneDX format)
-docker run --rm -v $(pwd)/test-fixtures:/repo keylens scan --path /repo --format cyclonedx
+docker run --rm -v $(pwd)/test-fixtures:/repo cbom scan --path /repo --format cyclonedx
 
 # Run a diff
-docker run --rm -v $(pwd):/workspace keylens diff --base /workspace/base.json --head /workspace/head.json
+docker run --rm -v $(pwd):/workspace cbom diff --base /workspace/base.json --head /workspace/head.json
 
 # Run a strict diff
-docker run --rm -v $(pwd):/workspace keylens diff --base /workspace/base.json --head /workspace/head.json --strict
+docker run --rm -v $(pwd):/workspace cbom diff --base /workspace/base.json --head /workspace/head.json --strict
 ```
 
 ---

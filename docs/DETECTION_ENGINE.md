@@ -1,5 +1,5 @@
 
-keylens extracts detailed cryptographic parameters, not just algorithm names:
+cbom extracts detailed cryptographic parameters, not just algorithm names:
 
 ### Algorithm String Parsing
 

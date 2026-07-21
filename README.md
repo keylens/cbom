@@ -21,7 +21,7 @@ See your cryptographic posture instantly, without walls of JSON.
   <img src="docs/demo.gif" alt="Keylens Scan Demo" width="600" />
 </div>
 
-*Generate actionable insights instantly with `keylens scan --summary`.*
+*Generate actionable insights instantly with `cbom scan --summary`.*
 
 ---
 
@@ -29,7 +29,7 @@ See your cryptographic posture instantly, without walls of JSON.
 
 - **Speed & DX:** Written in Rust, Keylens offers a 50ms execution time with zero dependencies. Utilizing AST-based scanning, it provides accurate, compilation-free detection of cryptographic usage.
 - **Actionable Security:** Beyond just a **CBOM generator**, Keylens provides `--fix-suggestions` and performs SBOM↔CBOM dependency correlation, giving you context-rich security detections.
-- **CI/CD Gating:** Utilize our **CBOM GitHub Action** and the unique `keylens diff` feature for **banned cryptography detection CI**. Validate against **Rego policy crypto compliance** to block deprecated crypto before it merges.
+- **CI/CD Gating:** Utilize our **CBOM GitHub Action** and the unique `cbom diff` feature for **banned cryptography detection CI**. Validate against **Rego policy crypto compliance** to block deprecated crypto before it merges.
 
 ---
 
@@ -40,7 +40,7 @@ Get started in seconds. No complex setup required.
 ```bash
 brew install keylens/tap/cbom
 cd my-project
-keylens scan --summary
+cbom scan --summary
 ```
 
 ---
@@ -49,10 +49,10 @@ keylens scan --summary
 
 Keylens integrates seamlessly into your developer and security workflows:
 
-- **Generating a CBOM:** Run `keylens scan` to instantly inventory cryptography across Python and JavaScript codebases, as well as dependency lockfiles.
-- **Diffing for PRs:** Use `keylens diff --base main.json --head pr.json` to detect newly introduced cryptography in a pull request.
-- **Policy Checking against CNSA 2.0:** Leverage `keylens scan --strict` to validate your cryptographic assets against modern standards and block critically insecure algorithms.
-- **Viewing History:** Use the interactive TUI with `keylens view` to explore findings and audit historical snapshots.
+- **Generating a CBOM:** Run `cbom scan` to instantly inventory cryptography across Python and JavaScript codebases, as well as dependency lockfiles.
+- **Diffing for PRs:** Use `cbom diff --base main.json --head pr.json` to detect newly introduced cryptography in a pull request.
+- **Policy Checking against CNSA 2.0:** Leverage `cbom scan --strict` to validate your cryptographic assets against modern standards and block critically insecure algorithms.
+- **Viewing History:** Use the interactive TUI with `cbom view` to explore findings and audit historical snapshots.
 
 ---
 
