@@ -34,8 +34,8 @@ pub fn load_cbom(path: &str) -> Result<Vec<CryptoAsset>, String> {
         return Err(format!("File not found: {}", path));
     }
 
-    let contents = fs::read_to_string(p)
-        .map_err(|e| format!("Failed to read '{}': {}", path, e))?;
+    let contents =
+        fs::read_to_string(p).map_err(|e| format!("Failed to read '{}': {}", path, e))?;
 
     let assets: Vec<CryptoAsset> = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse '{}' as CBOM JSON: {}", path, e))?;
@@ -133,6 +133,14 @@ mod tests {
             severity: Severity::Unknown,
             detection_source: DetectionSource::SourceCode,
             findings: Vec::new(),
+            cert_subject: None,
+            cert_issuer: None,
+            cert_expiry: None,
+            cert_serial: None,
+            protocol_version: None,
+            cipher_suites: Vec::new(),
+            dependency_path: None,
+            remediation: None,
         }
     }
 
