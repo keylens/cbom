@@ -9,7 +9,7 @@ homepage = "https://keylens.dev"
 repository = "https://github.com/keylens/cbom"
 readme = "README.md"
 keywords = ["cbom", "cryptography", "pqc", "security", "sbom"]
-categories = ["command-line-utilities", "development-tools::security"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
