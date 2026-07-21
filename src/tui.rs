@@ -290,7 +290,7 @@ fn render_table(f: &mut Frame, area: Rect, app: &mut App) {
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::DarkGray)),
     )
-    .row_highlight_style(
+    .highlight_style(
         Style::default()
             .add_modifier(Modifier::REVERSED)
             .fg(Color::Cyan),

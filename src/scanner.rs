@@ -1709,7 +1709,7 @@ fn extract_cert_info_from_der(der_data: &[u8]) -> Option<(String, String, String
 
     let subject = cert.subject().to_string();
     let issuer = cert.issuer().to_string();
-    let not_after = cert.validity().not_after.to_rfc2822();
+    let not_after = cert.validity().not_after.to_rfc2822().unwrap_or_else(|_| "Unknown".to_string());
     let serial = cert.serial.to_str_radix(16);
     let pub_key_algo = format!("{:?}", cert.public_key().algorithm.algorithm);
 

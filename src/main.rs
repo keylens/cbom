@@ -317,8 +317,8 @@ fn print_summary(findings: &[models::CryptoAsset]) {
 }
 
 fn truncate(s: &str, max: usize) -> String {
-    if s.len() > max {
-        format!("{}…", &s[..max - 1])
+    if s.chars().count() > max {
+        format!("{}…", s.chars().take(max - 1).collect::<String>())
     } else {
         s.to_string()
     }
