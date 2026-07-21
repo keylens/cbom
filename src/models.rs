@@ -115,7 +115,7 @@ pub struct CryptoAsset {
     pub detection_source: DetectionSource,
 
     /// Human-readable policy findings/warnings for this asset.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub findings: Vec<String>,
 
     // --- Certificate metadata (populated for X.509 cert findings) ---
@@ -141,7 +141,7 @@ pub struct CryptoAsset {
     pub protocol_version: Option<String>,
 
     /// Cipher suites configured or detected.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cipher_suites: Vec<String>,
 
     // --- Dependency correlation ---
@@ -323,7 +323,7 @@ pub struct CycloneDxProtocolProperties {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     /// Cipher suites configured for this protocol.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cipher_suites: Vec<CycloneDxCipherSuite>,
 }
 

@@ -284,19 +284,20 @@ fn generate_remediation(algo: &str, library_source: &str) -> Option<String> {
 
     // --- DES ---
     if algo == "DES" {
-        if lib.contains("crypto") || lib.contains("node") {
-            return Some(
-                "Replace DES with AES-256-GCM.\n\
-                 Before: crypto.createCipheriv('des-ecb', key, '')\n\
-                 After:  crypto.createCipheriv('aes-256-gcm', key, iv)"
-                    .to_string(),
-            );
-        }
+        // Java check first because "javax.crypto" contains "crypto"
         if lib.contains("javax") || lib.contains("cipher") || lib.contains("java") {
             return Some(
                 "Replace DES with AES/GCM.\n\
                  Before: Cipher.getInstance(\"DES\")\n\
                  After:  Cipher.getInstance(\"AES/GCM/NoPadding\")"
+                    .to_string(),
+            );
+        }
+        if lib.contains("crypto") || lib.contains("node") {
+            return Some(
+                "Replace DES with AES-256-GCM.\n\
+                 Before: crypto.createCipheriv('des-ecb', key, '')\n\
+                 After:  crypto.createCipheriv('aes-256-gcm', key, iv)"
                     .to_string(),
             );
         }
